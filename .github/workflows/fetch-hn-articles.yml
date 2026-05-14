@@ -33,6 +33,8 @@ jobs:
           else
             git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
           fi
+          # filter-repo drops remote refs; force-with-lease needs a fresh origin/<branch> that matches GitHub.
+          git fetch origin "${{ github.ref_name }}"
 
       - name: Fetch and save HN articles
         run: python scripts/fetch_hn_articles.py
