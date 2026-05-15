@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>Wikipedia File Explorer</title>
+  <meta content="Browse Wikipedia, Wikimedia Commons, and the Earth itself as a folder tree on a Windows XP desktop you can actually use. By Sami Smith." name="description"/>
+  <meta content="Sami Smith" name="author"/>
+  <link href="https://explorer.samismith.com/" rel="canonical"/>
+
+  <!-- Favicon: a folder emoji, inline-SVG so it works without an asset. -->
+  <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%93%81%3C/text%3E%3C/svg%3E" rel="icon" type="image/svg+xml"/>
+
+  <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, etc.) -->
+  <meta content="website" property="og:type"/>
+  <meta content="https://explorer.samismith.com/" property="og:url"/>
+  <meta content="Wikipedia File Explorer" property="og:title"/>
+  <meta content="Browse Wikipedia, Wikimedia Commons, and the Earth itself as a folder tree on a Windows XP desktop." property="og:description"/>
+  <meta content="https://explorer.samismith.com/og.png" property="og:image"/>
+  <meta content="1200" property="og:image:width"/>
+  <meta content="630" property="og:image:height"/>
+
+  <!-- Twitter / X cards -->
+  <meta content="summary_large_image" name="twitter:card"/>
+  <meta content="Wikipedia File Explorer" name="twitter:title"/>
+  <meta content="Browse Wikipedia, Wikimedia Commons, and the Earth itself as a folder tree on a Windows XP desktop." name="twitter:description"/>
+  <meta content="https://explorer.samismith.com/og.png" name="twitter:image"/>
+  <meta content="@hellosami" name="twitter:creator"/>
+  <meta content="@hellosami" name="twitter:site"/>
+
+  <!-- XP.css from botoxparty — provides faithful Windows XP Luna window chrome
+       (title bars, buttons, status bars, treeviews, fieldsets). Loaded first so
+       my custom CSS layers desktop-specific stuff (wallpaper, taskbar, icons)
+       on top without fighting the window chrome. Self-hosted in /vendor/ so
+       we don't pay a third-party CDN's DNS+TLS hop on every cold visit. -->
+  <link href="./vendor/xp.css" rel="stylesheet"/>
+
+  <link href="./css/base.css" rel="stylesheet"/>
+  <link href="./css/explorer.css" rel="stylesheet"/>
+  <link href="./css/desktop.css" rel="stylesheet"/>
+
+  <!-- Warm up the Wikipedia/Commons image hosts so the first article's
+       <img> tags don't pay DNS + TLS handshake latency on top of the
+       network round trip. -->
+  <link crossorigin="" href="https://upload.wikimedia.org" rel="preconnect"/>
+  <link crossorigin="" href="https://commons.wikimedia.org" rel="preconnect"/>
+
+  <!-- Apply the saved wallpaper BEFORE first paint so the teal default
+       doesn't flash. Inline + blocking by design; runs at <head> parse. -->
+  <script>
+    (function () {
+      try {
+        var url = localStorage.getItem('desktopBg');
+        if (!url) return;
+        var s = document.createElement('style');
+        s.textContent = 'body{background-image:url("' + url.replace(/"/g, '%22') +
+          '")!important;background-size:cover!important;background-position:center center!important;background-repeat:no-repeat!important}';
+        document.head.appendChild(s);
+      } catch (_) {}
+    })();
+  </script>
+</head>
+<body>
+<div style="background: #ff6600; color: white; padding: 20px; margin-bottom: 20px; font-family: sans-serif;">
+<h1 style="margin: 0 0 10px 0;">#3 - Explore Wikipedia Like a Windows XP Desktop</h1>
+<p style="margin: 5px 0;"><strong>Original URL:</strong> <a href="https://explorer.samismith.com/" style="color: white;">https://explorer.samismith.com/</a></p>
+<p style="margin: 5px 0;"><strong>Downloaded:</strong> 2026-05-15 12:24:38 UTC</p>
+<p style="margin: 5px 0;"><strong>Source:</strong> Hacker News Top Stories</p>
+</div>
+
+  <!-- Shared SVG sprite library. Each <symbol> is an authentic-XP-flavoured
+       icon (yellow folder, blue globe, book, notepad, recycle bin, etc).
+       Inline + referenced via <use href="#ico-X"/> so they stay crisp at
+       any DPI and add zero network requests. -->
+  <svg aria-hidden="true" height="0" style="position:absolute" width="0">
+    <defs>
+      <!-- Reusable gradients (kept for back-compat with the other glyphs). -->
+      <linearGradient id="gradYellowTab" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#FCE08C"></stop>
+        <stop offset="100%" stop-color="#E2A227"></stop>
+      </linearGradient>
+      <linearGradient id="gradYellowBody" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#FFE793"></stop>
+        <stop offset="55%" stop-color="#F8C752"></stop>
+        <stop offset="100%" stop-color="#D89A1F"></stop>
+      </linearGradient>
+
+      <!-- Authentic XP-style folder gradients. The folder reads as 3D paper
+           in three layered pieces: a darker back, a slightly lighter
+           "opening" (the inside of the back wall visible above the front
+           edge), and the lit-from-above front face. -->
+      <linearGradient id="xpFolderBack" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#F1AE38"></stop>
+        <stop offset="100%" stop-color="#B2741A"></stop>
+      </linearGradient>
+      <linearGradient id="xpFolderInside" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#FAD571"></stop>
+        <stop offset="100%" stop-color="#E5AC35"></stop>
+      </linearGradient>
+      <linearGradient id="xpFolderFront" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#FFE9A1"></stop>
+        <stop offset="18%" stop-color="#FED57A"></stop>
+        <stop offset="55%" stop-color="#F9BD42"></stop>
+        <stop offset="100%" stop-color="#C5851B"></stop>
+      </linearGradient>
+      <radialGradient cx="0.3" cy="0.3" id="gradGlobe" r="0.7">
+        <stop offset="0%" stop-color="#9ED2FF"></stop>
+        <stop offset="55%" stop-color="#3D8BD9"></stop>
+        <stop offset="100%" stop-color="#0F4DA0"></stop>
+      </radialGradient>
+      <linearGradient id="gradPaper" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#FFFFFF"></stop>
+        <stop offset="100%" stop-color="#E2E2E2"></stop>
+      </linearGradient>
+
+      <!-- Authentic XP folder. Three layered pieces:
+           1. back-wall + tab (darker yellow with rounded corners — the part
+              behind the front face); the tab sticks up on the top-left, the
+              back wall continues to the top-right as the "opening".
+           2. inside lip — a slim band of lighter yellow showing through the
+              opening above the front face, gives the 3D depth illusion.
+           3. front face — main visible yellow, top-edge highlight, lit-from-
+              above 3-stop gradient.
+           Subtle dark outline around the whole shape ties it together. -->
+      <symbol id="ico-folder" viewBox="0 0 48 40">
+        <!-- Back layer: tab + back wall, all in one rounded path. -->
+        <path d="M 5 9 Q 5 7 7 7 L 16 7 Q 17 7 18 8 L 21 11 L 41 11 Q 43 11 43 13 L 43 35 Q 43 36 42 36 L 6 36 Q 5 36 5 35 Z" fill="url(#xpFolderBack)"></path>
+        <!-- Inner lip: a sliver visible above the front face on the right
+             side, simulating the open mouth of the folder. -->
+        <path d="M 21 12 L 41 12 Q 42 12 42 13 L 42 17 L 24 17 L 21 14 Z" fill="url(#xpFolderInside)"></path>
+        <!-- Front face — overlaps the bottom 2/3 of the back layer. -->
+        <path d="M 4 15 Q 4 14 5 14 L 43 14 Q 44 14 44 15 L 44 35 Q 44 37 42 37 L 6 37 Q 4 37 4 35 Z" fill="url(#xpFolderFront)"></path>
+        <!-- Top-edge highlight along the front face — the bright line that
+             makes the folder look lit from above. -->
+        <path d="M 6 15.2 L 42 15.2" opacity="0.85" stroke="#FFF6C9" stroke-linecap="round" stroke-width="0.9"></path>
+        <!-- Soft outer outline — darker amber, ties the layers together. -->
+        <path d="M 5 9 Q 5 7 7 7 L 16 7 Q 17 7 18 8 L 21 11 L 41 11 Q 43 11 43 13 L 43 14 L 44 14 Q 44 14 44 15 L 44 35 Q 44 37 42 37 L 6 37 Q 4 37 4 35 L 4 15 Q 4 14 5 14 L 5 9 Z" fill="none" stroke="#7A4F0E" stroke-linejoin="round" stroke-width="0.7"></path>
+        <!-- Inner shadow on the inside lip — sells the "below the lip" depth. -->
+        <path d="M 5 14.5 L 21 14.5 L 23.5 17 L 42 17" fill="none" stroke="rgba(0,0,0,0.18)" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.6"></path>
+      </symbol>
+
+      <!-- Geofile: a yellow folder with a blue globe sitting on top of it. -->
+      <symbol id="ico-geofile" viewBox="0 0 48 40">
+        <path d="M 2 12 L 12 12 L 16 16 L 46 16 L 46 38 L 2 38 Z" fill="#C8841E" stroke="#7A540F" stroke-width="0.6"></path>
+        <path d="M 3 10 L 12 10 L 16 14 L 46 14 L 46 18 L 3 18 Z" fill="url(#gradYellowTab)" stroke="#7A540F" stroke-width="0.6"></path>
+        <path d="M 2 18 L 46 18 L 44 36 L 4 36 Z" fill="url(#gradYellowBody)" stroke="#7A540F" stroke-width="0.6"></path>
+        <circle cx="24" cy="20" fill="url(#gradGlobe)" r="9" stroke="#063A75" stroke-width="0.5"></circle>
+        <path d="M 15 20 Q 24 14 33 20" fill="none" stroke="#0A3F80" stroke-width="0.5"></path>
+        <path d="M 15 20 Q 24 26 33 20" fill="none" stroke="#0A3F80" stroke-width="0.5"></path>
+        <ellipse cx="24" cy="20" fill="none" rx="3.5" ry="9" stroke="#0A3F80" stroke-width="0.5"></ellipse>
+        <line stroke="#0A3F80" stroke-width="0.5" x1="15" x2="33" y1="20" y2="20"></line>
+      </symbol>
+
+      <!-- Encyclopedia: a closed book. -->
+      <symbol id="ico-book" viewBox="0 0 48 40">
+        <path d="M 6 6 L 24 8 L 42 6 L 42 36 L 24 38 L 6 36 Z" fill="#7A1818" stroke="#3D0808" stroke-width="0.6"></path>
+        <path d="M 8 8 L 24 10 L 24 36 L 8 34 Z" fill="#B82828" stroke="#5A0F0F" stroke-width="0.4"></path>
+        <path d="M 24 10 L 40 8 L 40 34 L 24 36 Z" fill="#9A2020" stroke="#5A0F0F" stroke-width="0.4"></path>
+        <path d="M 23.5 10 L 24.5 10 L 24.5 36 L 23.5 36 Z" fill="#3D0808"></path>
+        <!-- Gold "pages" stripe along the bottom. -->
+        <path d="M 8 33 L 24 34.5 L 40 33 L 40 35 L 24 36 L 8 35 Z" fill="#E0B340"></path>
+      </symbol>
+
+      <!-- Readme.txt / Notepad: white page with blue header + ruled lines. -->
+      <symbol id="ico-notepad" viewBox="0 0 48 40">
+        <path d="M 8 4 L 38 4 L 38 38 L 8 38 Z" fill="url(#gradPaper)" stroke="#909090" stroke-width="0.6"></path>
+        <path d="M 8 4 L 38 4 L 38 9 L 8 9 Z" fill="#5A8AC5"></path>
+        <line stroke="#7A7A7A" stroke-width="0.6" x1="11" x2="35" y1="14" y2="14"></line>
+        <line stroke="#7A7A7A" stroke-width="0.6" x1="11" x2="35" y1="18" y2="18"></line>
+        <line stroke="#7A7A7A" stroke-width="0.6" x1="11" x2="35" y1="22" y2="22"></line>
+        <line stroke="#7A7A7A" stroke-width="0.6" x1="11" x2="30" y1="26" y2="26"></line>
+        <line stroke="#7A7A7A" stroke-width="0.6" x1="11" x2="33" y1="30" y2="30"></line>
+        <line stroke="#7A7A7A" stroke-width="0.6" x1="11" x2="28" y1="34" y2="34"></line>
+        <!-- Folded corner. -->
+        <path d="M 33 4 L 38 4 L 38 9 Z" fill="#D8D8D8" stroke="#909090" stroke-width="0.4"></path>
+      </symbol>
+
+      <!-- Welcome: a blue envelope with a yellow Q-mark badge. -->
+      <symbol id="ico-welcome" viewBox="0 0 48 40">
+        <path d="M 5 10 L 43 10 L 43 34 L 5 34 Z" fill="#E5F0FF" stroke="#3A6EA5" stroke-width="0.6"></path>
+        <path d="M 5 10 L 24 24 L 43 10 Z" fill="#A9CFFF" stroke="#3A6EA5" stroke-width="0.6"></path>
+        <circle cx="36" cy="28" fill="#FFD23D" r="7" stroke="#9A6F0A" stroke-width="0.6"></circle>
+        <text fill="#7A5300" font-family="Tahoma, sans-serif" font-size="10" font-weight="700" text-anchor="middle" x="36" y="32">?</text>
+      </symbol>
+
+      <!-- Media: a film strip stylised — sprocket-hole frames with a tiny
+           lens / play-triangle on top. -->
+      <symbol id="ico-media" viewBox="0 0 48 40">
+        <rect fill="#2A2A2A" height="30" rx="2" stroke="#000" stroke-width="0.6" width="40" x="4" y="6"></rect>
+        <rect fill="#FAFAFA" height="3" width="5" x="7" y="9"></rect>
+        <rect fill="#FAFAFA" height="3" width="5" x="14" y="9"></rect>
+        <rect fill="#FAFAFA" height="3" width="5" x="21" y="9"></rect>
+        <rect fill="#FAFAFA" height="3" width="5" x="28" y="9"></rect>
+        <rect fill="#FAFAFA" height="3" width="6" x="35" y="9"></rect>
+        <rect fill="#FAFAFA" height="3" width="5" x="7" y="30"></rect>
+        <rect fill="#FAFAFA" height="3" width="5" x="14" y="30"></rect>
+        <rect fill="#FAFAFA" height="3" width="5" x="21" y="30"></rect>
+        <rect fill="#FAFAFA" height="3" width="5" x="28" y="30"></rect>
+        <rect fill="#FAFAFA" height="3" width="6" x="35" y="30"></rect>
+        <rect fill="#5BAFE8" height="14" width="34" x="7" y="14"></rect>
+        <path d="M 21 17 L 29 21 L 21 25 Z" fill="#FFFFFF"></path>
+      </symbol>
+
+      <!-- ── Explorer toolbar icons ─────────────────────────────────────
+           Standard-buttons row glyphs: back/forward circles, up-folder,
+           magnifying glass, plain yellow folder, 4-square views. -->
+      <radialGradient cx="0.35" cy="0.3" id="gradGreenBtn" r="0.85">
+        <stop offset="0%" stop-color="#C9F5A0"></stop>
+        <stop offset="40%" stop-color="#6EC83C"></stop>
+        <stop offset="100%" stop-color="#2B6E16"></stop>
+      </radialGradient>
+      <linearGradient id="gradGreenBtnRim" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#F0F6E8"></stop>
+        <stop offset="100%" stop-color="#88A85C"></stop>
+      </linearGradient>
+
+      <symbol id="ico-tb-back" viewBox="0 0 22 22">
+        <circle cx="11" cy="11" fill="url(#gradGreenBtnRim)" r="10"></circle>
+        <circle cx="11" cy="11" fill="url(#gradGreenBtn)" r="8.6" stroke="#1F4E0E" stroke-width="0.4"></circle>
+        <path d="M 13.5 6.5 L 7.5 11 L 13.5 15.5 L 13.5 12.5 L 16 12.5 L 16 9.5 L 13.5 9.5 Z" fill="#FFFFFF" stroke="#1F4E0E" stroke-linejoin="round" stroke-width="0.4"></path>
+        <ellipse cx="11" cy="6.5" fill="#FFFFFF" opacity="0.35" rx="6" ry="2"></ellipse>
+      </symbol>
+      <symbol id="ico-tb-forward" viewBox="0 0 22 22">
+        <circle cx="11" cy="11" fill="url(#gradGreenBtnRim)" r="10"></circle>
+        <circle cx="11" cy="11" fill="url(#gradGreenBtn)" r="8.6" stroke="#1F4E0E" stroke-width="0.4"></circle>
+        <path d="M 8.5 6.5 L 14.5 11 L 8.5 15.5 L 8.5 12.5 L 6 12.5 L 6 9.5 L 8.5 9.5 Z" fill="#FFFFFF" stroke="#1F4E0E" stroke-linejoin="round" stroke-width="0.4"></path>
+        <ellipse cx="11" cy="6.5" fill="#FFFFFF" opacity="0.35" rx="6" ry="2"></ellipse>
+      </symbol>
+      <symbol id="ico-tb-up" viewBox="0 0 22 22">
+        <!-- Smaller folder in lower half so the up-arrow has room to read. -->
+        <path d="M 2 11 Q 2 10 3 10 L 7 10 Q 8 10 8.5 10.5 L 10 12 L 18 12 Q 19 12 19 13 L 19 19 Q 19 20 18 20 L 3 20 Q 2 20 2 19 Z" fill="url(#xpFolderBack)" stroke="#7A4F0E" stroke-width="0.4"></path>
+        <path d="M 2 13 Q 2 12.5 2.5 12.5 L 18.5 12.5 Q 19 12.5 19 13 L 19 19 Q 19 20 18 20 L 3 20 Q 2 20 2 19 Z" fill="url(#xpFolderFront)" stroke="#7A4F0E" stroke-width="0.4"></path>
+        <!-- Big bold green up-arrow on top. -->
+        <path d="M 9 8 L 9 11 L 14 11 L 14 8 L 17 8 L 11.5 2 L 6 8 Z" fill="#3FA53F" stroke="#1F4E0E" stroke-linejoin="round" stroke-width="0.5"></path>
+        <!-- Highlight on the arrow head. -->
+        <path d="M 11.5 3 L 14 6" opacity="0.7" stroke="#A7E68A" stroke-linecap="round" stroke-width="0.8"></path>
+      </symbol>
+      <symbol id="ico-tb-search" viewBox="0 0 22 22">
+        <!-- Magnifying glass. -->
+        <circle cx="9.5" cy="9.5" fill="none" r="5.5" stroke="#3A6EA5" stroke-width="1.8"></circle>
+        <circle cx="9.5" cy="9.5" fill="#A8D0F0" opacity="0.5" r="3.2"></circle>
+        <path d="M 13.5 13.5 L 18 18" stroke="#3A6EA5" stroke-linecap="round" stroke-width="2.4"></path>
+      </symbol>
+      <symbol id="ico-tb-folders" viewBox="0 0 22 22">
+        <path d="M 2 7 Q 2 6 3 6 L 8 6 Q 9 6 9.5 6.5 L 11 8 L 19 8 Q 20 8 20 9 L 20 16 Q 20 17 19 17 L 3 17 Q 2 17 2 16 Z" fill="url(#xpFolderBack)" stroke="#7A4F0E" stroke-width="0.4"></path>
+        <path d="M 2 9 Q 2 8.5 2.5 8.5 L 19.5 8.5 Q 20 8.5 20 9 L 20 16 Q 20 17 19 17 L 3 17 Q 2 17 2 16 Z" fill="url(#xpFolderFront)" stroke="#7A4F0E" stroke-width="0.4"></path>
+        <path d="M 3 9 L 19 9" opacity="0.9" stroke="#FFF6C9" stroke-width="0.6"></path>
+      </symbol>
+      <symbol id="ico-tb-views" viewBox="0 0 22 22">
+        <rect fill="#E0E8F4" height="7" rx="1" stroke="#5680C5" stroke-width="0.6" width="7" x="3" y="3"></rect>
+        <rect fill="#E0E8F4" height="7" rx="1" stroke="#5680C5" stroke-width="0.6" width="7" x="12" y="3"></rect>
+        <rect fill="#E0E8F4" height="7" rx="1" stroke="#5680C5" stroke-width="0.6" width="7" x="3" y="12"></rect>
+        <rect fill="#E0E8F4" height="7" rx="1" stroke="#5680C5" stroke-width="0.6" width="7" x="12" y="12"></rect>
+      </symbol>
+      <symbol id="ico-tb-go" viewBox="0 0 22 22">
+        <circle cx="11" cy="11" fill="url(#gradGreenBtn)" r="9.5" stroke="#1F4E0E" stroke-width="0.4"></circle>
+        <path d="M 7.5 11 L 14 11 M 11 7 L 15 11 L 11 15" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+        <ellipse cx="11" cy="6.5" fill="#FFFFFF" opacity="0.4" rx="6" ry="2"></ellipse>
+      </symbol>
+      <symbol id="ico-win-flag" viewBox="0 0 22 22">
+        <!-- 4-square XP windows flag, slightly tilted. -->
+        <g transform="translate(2 3) skewY(-8)">
+          <rect fill="#E2362D" height="6" width="8" x="0" y="0"></rect>
+          <rect fill="#5DB73A" height="6" width="8" x="9" y="0"></rect>
+          <rect fill="#0E72C9" height="6" width="8" x="0" y="7"></rect>
+          <rect fill="#F4B61C" height="6" width="8" x="9" y="7"></rect>
+        </g>
+      </symbol>
+
+      <!-- Recycle Bin: green-arrowed bin (empty). -->
+      <symbol id="ico-recycle" viewBox="0 0 48 40">
+        <path d="M 12 14 L 36 14 L 33 36 L 15 36 Z" fill="#D0E7F8" stroke="#3A6EA5" stroke-width="0.6"></path>
+        <path d="M 12 14 L 36 14 L 36 17 L 12 17 Z" fill="#FFFFFF" stroke="#3A6EA5" stroke-width="0.4"></path>
+        <!-- Vertical "ridges" inside the bin. -->
+        <line stroke="#7A9ABF" stroke-width="0.5" x1="19" x2="20" y1="19" y2="34"></line>
+        <line stroke="#7A9ABF" stroke-width="0.5" x1="24" x2="24" y1="19" y2="34"></line>
+        <line stroke="#7A9ABF" stroke-width="0.5" x1="29" x2="28" y1="19" y2="34"></line>
+        <!-- Green recycle arrows on top. -->
+        <path d="M 18 6 L 22 4 L 22 6 L 28 6 L 30 8 L 28 8 L 30 10 L 28 10 L 22 10 L 22 12 L 18 10 Z" fill="#3FA53F" stroke="#1A5C1A" stroke-width="0.4"></path>
+        <path d="M 30 9 L 30 13" stroke="#3FA53F" stroke-linecap="round" stroke-width="1.4"></path>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="desktop">
+
+    <!-- ── Desktop icons (top-left, double-click to open) ───────────── -->
+    <div class="desktop-icons" id="desktopIcons">
+      <button aria-label="Open Wikipedia" class="desktop-icon" data-app="wikipedia" type="button">
+        <svg class="desktop-icon-glyph" viewBox="0 0 48 40"><use href="#ico-book"></use></svg>
+        <span class="desktop-icon-label">Wikipedia</span>
+      </button>
+      <button aria-label="Open Media" class="desktop-icon" data-app="media" type="button">
+        <svg class="desktop-icon-glyph" viewBox="0 0 48 40"><use href="#ico-media"></use></svg>
+        <span class="desktop-icon-label">Media</span>
+      </button>
+      <button aria-label="Open Geofile Explorer" class="desktop-icon" data-app="geofile" type="button">
+        <svg class="desktop-icon-glyph" viewBox="0 0 48 40"><use href="#ico-geofile"></use></svg>
+        <span class="desktop-icon-label">Geofile Explorer</span>
+      </button>
+      <button aria-label="Open Readme.txt" class="desktop-icon" data-app="readme" type="button">
+        <svg class="desktop-icon-glyph" viewBox="0 0 48 40"><use href="#ico-notepad"></use></svg>
+        <span class="desktop-icon-label">Readme.txt</span>
+      </button>
+    </div>
+
+    <!-- Explorer windows (both Geofile and Wikipedia) are now spawned
+         dynamically by desktop.js — each desktop-icon click creates a fresh
+         .explorer-pane and appends it here in .desktop. No static mount
+         points needed. -->
+
+
+    <!-- Reader windows are now spawned dynamically per article — see
+         _spawnReader in js/wikipedia.js. No static mount point needed. -->
+
+    <!-- ── Media Viewer (opens when a Commons file is double-clicked) ─ -->
+    <div class="window app-window" id="mediaViewerWindow" style="display:none; width: min(720px, 92vw); height: min(640px, calc(100vh - 80px)); top: 30px; left: max(120px, calc(50vw - 360px))">
+      <div class="title-bar">
+        <div class="title-bar-text" id="mediaViewerTitle">Media Viewer</div>
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize"></button>
+          <button aria-label="Close"></button>
+        </div>
+      </div>
+      <div class="window-body mv-body" id="mediaViewerBody" style="background:#202020; padding:0; overflow:auto; flex:1; min-height:0">
+        <p style="color:#bbb; text-align:center; padding:40px">Loading…</p>
+      </div>
+      <div class="status-bar">
+        <p class="status-bar-field" id="mediaViewerStatus">—</p>
+        <p class="status-bar-field" style="text-align:right">
+          <a href="#" id="mediaViewerOpenLink" rel="noopener" target="_blank">Open on Commons ↗</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- ── Readme.txt window — styled as a real Notepad .txt note ──── -->
+    <div class="window app-window" id="readmeWindow" style="display:none; width: min(560px, 90vw); height: min(360px, 70vh)">
+      <div class="title-bar">
+        <div class="title-bar-text">Readme.txt - Notepad</div>
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize"></button>
+          <button aria-label="Close"></button>
+        </div>
+      </div>
+      <pre class="notepad-body" id="readmeBody">============================================================
+explorer.samismith.com
+============================================================
+
+
+FEATURES
+-------------
+
+WIKIPEDIA
+Explore all of Wikipedia categories as folders, articles should open up as documents. Everything on wikipedia should be accessible unless it's one of the 100 or so pages that don't have a category assigned.
+
+MEDIA
+Wikimedia Commons category explorer. Right-click on any image to set it as your desktop background.
+
+GEOFILE EXPLORER
+In-progress project I'm working on where you can explore the Earth as a folder on your computer. Drag and drop a image to upload it to the folder, or right click to write a text note.
+
+
+CONTACT ME
+---------------
+Email: sami at samismith.com
+Twitter: hellosami
+Blue Sky: @hellosami.bsky.social
+
+
+INSPIRATION
+---------------
+Neal.fun's Wiki Files
+Depths of Wikipedia
+orteil.dashnet.org/nested
+irfansubasi.com
+konsti.club/webSys/webxp/webxp.html
+react-xp.jamiepates.com
+botoxparty.github.io/XP.css
+wikiboard.org
+
+
+---------------
+All of the folders and files in "Wikipedia" and "Media" are properties of Wikimedia and their respective owners. If you would like to help improve the folder structure, sign up for an account at Wikipedia and Wikimedia and start editing :)</pre>
+      <div class="status-bar">
+        <p class="status-bar-field">Ln 1, Col 1</p>
+      </div>
+    </div>
+
+    <!-- ── Upload (Add an Image / Note) modal — singleton, opened by Geofile ─ -->
+    <div class="geofile-modal" id="uploadModal">
+      <div class="gm-scrim" data-close="1"></div>
+      <div aria-modal="true" class="window gm-card" role="dialog" style="width: min(440px, 92vw)">
+        <div class="title-bar">
+          <div class="title-bar-text" id="uploadTitle">Add an image</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="1"></button>
+          </div>
+        </div>
+        <div class="window-body has-space upload-body">
+          <div class="upload-tabs" role="tablist">
+            <button class="upload-tab is-active" data-tab="photo" role="tab" type="button">Photo</button>
+            <button class="upload-tab" data-tab="note" role="tab" type="button">Note</button>
+          </div>
+
+          <form autocomplete="off" id="uploadForm">
+            <!-- Photo pane -->
+            <div class="upload-pane" data-pane="photo">
+              <div class="upload-dropzone" id="uploadDropzone">
+                <input accept="image/jpeg,image/png,image/gif,image/webp" id="uploadFile" type="file"/>
+                <label class="upload-file-cta" for="uploadFile">Choose an image</label>
+                <span class="upload-dropzone-hint">or drop one here</span>
+                <div class="upload-filename" id="uploadFilename"></div>
+              </div>
+              <img alt="" id="uploadPreview"/>
+              <label class="upload-field">
+                <span>Caption <em>(optional)</em></span>
+                <textarea id="uploadCaption" maxlength="500" placeholder="What's the story?" rows="2"></textarea>
+              </label>
+            </div>
+            <!-- Note pane -->
+            <div class="upload-pane" data-pane="note" style="display:none">
+              <label class="upload-field">
+                <span>Note</span>
+                <textarea id="uploadNote" maxlength="4000" placeholder="Write something about this place…" rows="5"></textarea>
+              </label>
+            </div>
+
+            <label class="upload-field">
+              <span>Your name <em>(optional)</em></span>
+              <input id="uploadName" maxlength="80" placeholder="Shown publicly if approved" type="text"/>
+            </label>
+
+            <div aria-live="polite" class="upload-status" id="uploadStatus"></div>
+
+            <div class="upload-actions">
+              <button class="upload-cancel" data-close="1" type="button">Cancel</button>
+              <button class="upload-submit" id="uploadSubmit" type="submit">Submit for review</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Contribution viewer — image preview for approved/pending uploads ─ -->
+    <div class="geofile-modal" id="contribViewer">
+      <div class="gm-scrim" data-close="1"></div>
+      <div aria-modal="true" class="window gm-card" role="dialog" style="width: min(640px, 94vw)">
+        <div class="title-bar">
+          <div class="title-bar-text" id="contribViewerTitle">Image</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="1"></button>
+          </div>
+        </div>
+        <div class="window-body has-space" id="contribViewerBody" style="text-align:center"></div>
+      </div>
+    </div>
+
+    <!-- ── Start menu (XP two-column layout) ─────────────────────── -->
+    <div class="start-menu" id="startMenu">
+      <!-- Top blue header strip with "username" + avatar. -->
+      <div class="start-menu-header">
+        <div aria-hidden="true" class="start-menu-avatar">🙂</div>
+        <div class="start-menu-user">User</div>
+      </div>
+      <!-- Two columns. -->
+      <div class="start-menu-body">
+        <div class="start-menu-col start-menu-col-left">
+          <button class="start-menu-item" data-app="wikipedia" type="button">
+            <svg class="start-menu-item-glyph" viewBox="0 0 48 40"><use href="#ico-book"></use></svg>
+            <span><strong>Wikipedia</strong></span>
+          </button>
+          <button class="start-menu-item" data-app="media" type="button">
+            <svg class="start-menu-item-glyph" viewBox="0 0 48 40"><use href="#ico-media"></use></svg>
+            <span>Media</span>
+          </button>
+          <button class="start-menu-item" data-app="geofile" type="button">
+            <svg class="start-menu-item-glyph" viewBox="0 0 48 40"><use href="#ico-geofile"></use></svg>
+            <span>Geofile Explorer</span>
+          </button>
+          <div class="start-menu-sep" role="separator"></div>
+          <button class="start-menu-item" data-app="readme" type="button">
+            <svg class="start-menu-item-glyph" viewBox="0 0 48 40"><use href="#ico-notepad"></use></svg>
+            <span>Readme.txt</span>
+          </button>
+          <div aria-hidden="true" class="start-menu-all">
+            <span>All Programs</span>
+            <span class="start-menu-arrow">▶</span>
+          </div>
+        </div>
+        <div class="start-menu-col start-menu-col-right">
+          <button class="start-menu-item start-menu-item-stub" disabled="" type="button">
+            <svg class="start-menu-item-glyph" viewBox="0 0 48 40"><use href="#ico-folder"></use></svg>
+            <span>My Documents</span>
+          </button>
+          <button class="start-menu-item start-menu-item-stub" disabled="" type="button">
+            <svg class="start-menu-item-glyph" viewBox="0 0 48 40"><use href="#ico-folder"></use></svg>
+            <span>My Pictures</span>
+          </button>
+          <div class="start-menu-sep" role="separator"></div>
+          <button class="start-menu-item start-menu-item-stub" disabled="" type="button">
+            <span class="start-menu-item-glyph-emoji">⚙</span>
+            <span>Control Panel</span>
+          </button>
+          <button class="start-menu-item start-menu-item-stub" disabled="" type="button">
+            <span class="start-menu-item-glyph-emoji">❓</span>
+            <span>Help and Support</span>
+          </button>
+          <button class="start-menu-item start-menu-item-stub" disabled="" type="button">
+            <span class="start-menu-item-glyph-emoji">🔍</span>
+            <span>Search</span>
+          </button>
+          <button class="start-menu-item start-menu-item-stub" disabled="" type="button">
+            <span class="start-menu-item-glyph-emoji">▶</span>
+            <span>Run...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Taskbar ─────────────────────────────────────────────────── -->
+    <div class="taskbar">
+      <button aria-label="Start menu" class="taskbar-start" id="startBtn" type="button">
+        <span aria-hidden="true" class="taskbar-start-emoji">🪟</span>
+        <span>start</span>
+      </button>
+      <div class="taskbar-tasks" id="taskbarTasks"></div>
+      <div class="taskbar-tray">
+        <span class="taskbar-clock" id="taskbarClock">—</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- All scripts deferred — they download in parallel while HTML parses
+       and execute in order after DOMContentLoaded. Stops the parser from
+       blocking on each file, shaves real time off first paint. -->
+  <script defer="" src="./data/world.js"></script>
+  <script defer="" src="./js/data.js"></script>
+  <script defer="" src="./js/explorer.js"></script>
+  <script defer="" src="./js/wikipedia.js"></script>
+  <script defer="" src="./js/media.js"></script>
+  <script defer="" src="./js/desktop.js"></script>
+
+
+</body></html>
